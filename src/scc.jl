@@ -17,7 +17,8 @@ const scc_gas_molecular_conversions = Dict(:CO2         => 12/44, # C to CO2
                                             :HFC245fa   => 1., # HFC245fa to HFC245fa
                                             :HFC152a    => 1., # HFC152a to HFC152a
                                             :HFC236fa   => 1., # HFC236fa to HFC236fa
-                                            :HFC365mfc  => 1.)  # HFC365mfc to HFC365mfc d
+                                            :HFC365mfc  => 1., # HFC365mfc to HFC365mfc
+                                            :SF6        => 1.) # SF6 to SF6
 
 const scc_gas_pulse_size_conversions = Dict(:CO2    => 1e9, # Gt to t
                                         :N2O        => 1e6, # Mt to t
@@ -32,7 +33,8 @@ const scc_gas_pulse_size_conversions = Dict(:CO2    => 1e9, # Gt to t
                                         :HFC245fa   => 1e3, # kt to t
                                         :HFC152a    => 1e3, # kt to t
                                         :HFC236fa   => 1e3, # kt to t
-                                        :HFC365mfc  => 1e3) # kt to t
+                                        :HFC365mfc  => 1e3, # kt to t
+                                        :SF6        => 1e3) # kt to t
 """
     compute_scc(m::Model = get_model(); 
             year::Union{Int, Nothing} = nothing, 
@@ -115,7 +117,7 @@ function compute_scc(m::Model = get_model();
         )
 
     hfc_list = [:HFC23, :HFC32, :HFC43_10, :HFC125, :HFC134a, :HFC143a, :HFC227ea, :HFC245fa, :HFC152a, :HFC236fa, :HFC365mfc]
-    gases_list = [:CO2, :CH4, :N2O, hfc_list ...]
+    gases_list = [:CO2, :CH4, :N2O, :SF6, hfc_list ...]
 
     m = deepcopy(m) # in the case that an `m` was provided, be careful that we don't modify the original
 
@@ -872,7 +874,7 @@ function add_marginal_emissions!(m::Model, year::Int, gas::Symbol, pulse_size::F
         connect_param!(m, :marginalemission => :input, :n2o_emissions_identity => :output_n2o)
         connect_param!(m, :n2o_cycle => :fossil_emiss_N₂O, :marginalemission => :output)
 
-    elseif gas in hfc_list
+    elseif gas in hfc_list || gas == :SF6
 
         # get gas index
         other_ghg_gases = Mimi.dim_keys(m, :other_ghg)
@@ -891,7 +893,7 @@ function add_marginal_emissions!(m::Model, year::Int, gas::Symbol, pulse_size::F
         new_emissions = deepcopy(Mimi.model_param(m, model_param_name).values.data)
 
         # update emissions parameter with a pulse
-        new_emissions[pulse_year_index, gas_index] +=  pulse_size # add pulse in kt hfc
+        new_emissions[pulse_year_index, gas_index] +=  pulse_size # add pulse in kt hfc or sf6
         update_param!(m, :emiss_other_ghg, new_emissions)
         
     else
